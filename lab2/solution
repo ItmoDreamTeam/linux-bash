@@ -1,0 +1,137 @@
+  1. Создать раздел размером 500 МБ
+Информация о доступном диске /deb/sdb: fdisk -l /dev/sdb
+
+Disk /dev/sdb: 10 GiB, 10737418240 bytes, 20971520 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+
+Входим в интерактивный режим: fdisk /dev/sdb
+Создаём раздел:               n
+Тип - основной (primary):     p
+Номер раздела:                1
+Первый сектор:                2048
+Последний сектор:             +500M
+Сохраняем изменения:          w
+
+Результат:
+Device     Boot Start     End Sectors  Size Id Type
+/dev/sdb1        2048 1026047 1024000  500M 83 Linux
+
+  2. Создать ФС ext3 с размером блока 1024 байта
+mkfs.ext3 -b 1024 /dev/sdb1
+
+  3. Вывести суперблок
+dumpe2fs /dev/sdb1
+
+Фрагмент вывода:
+  Filesystem UUID:          113292d0-dbff-4502-88c2-3b457f39fcf1
+  Filesystem state:         clean
+  Errors behavior:          Continue
+  Filesystem OS type:       Linux
+  Inode count:              128016
+  Block count:              512000
+  Reserved block count:     25600
+  Free blocks:              485301
+  Free inodes:              128005
+  First block:              1
+  Block size:               1024
+  Fragment size:            1024
+  Reserved GDT blocks:      256
+  Blocks per group:         8192
+  Fragments per group:      8192
+  Inodes per group:         2032
+  Inode blocks per group:   254
+  Filesystem created:       Mon Feb 18 18:45:38 2019
+  Last mount time:          n/a
+  Last write time:          Mon Feb 18 18:45:38 2019
+  Mount count:              0
+  Maximum mount count:      -1
+  Last checked:             Mon Feb 18 18:45:38 2019
+  Check interval:           0 (<none>)
+  Reserved blocks uid:      0 (user root)
+  Reserved blocks gid:      0 (group root)
+  First inode:              11
+  Inode size:	              128
+  Journal inode:            8
+
+  4. Настроить автоматическую проверку ФС через 2 месяца или каждое второе монтирование
+tune2fs -i 2m -c 2 /dev/sdb1
+
+Суперблок:
+  Filesystem created:       Mon Feb 18 18:45:38 2019
+  Last mount time:          n/a
+  Last write time:          Mon Feb 18 18:53:36 2019
+  Mount count:              0
+  Maximum mount count:      2
+  Last checked:             Mon Feb 18 18:45:38 2019
+  Check interval:           5184000 (2 months)
+  Next check after:         Fri Apr 19 18:45:38 2019
+
+  5. Смонтировать ФС
+mkdir /mnt/newdisk
+mount /dev/sdb1 /mnt/newdisk/
+
+  6. Создать ссылку на ФС
+ln -s /mnt/newdisk/ ~/fs
+
+  7. Создать каталог в ФС
+mkdir ~/fs/folder
+
+  8. Включить автомонтирование ФС с запретом запускать файлы и без записи времени последнего доступа к файлу
+Файл /etc/fstab
+  /dev/sdb1 /mnt/newdisk ext3 auto,rw,noexec,noatime 0 2
+
+Суперблок после проверки ФС:
+  Filesystem created:       Mon Feb 18 18:45:38 2019
+  Last mount time:          Mon Feb 18 20:01:50 2019
+  Last write time:          Mon Feb 18 20:01:50 2019
+  Mount count:              1
+  Maximum mount count:      2
+  Last checked:             Mon Feb 18 20:01:50 2019
+  Check interval:           5184000 (2 months)
+  Next check after:         Fri Apr 19 20:01:50 2019
+
+  9. Увеличить размер раздела и ФС до 1 ГБ
+Входим в интерактивный режим:    fdisk /dev/sdb
+Удаляем раздел 1:                d
+Создаём раздел:                  n
+Тип - основной (primary):        p
+Номер раздела:                   1
+Первый сектор:                   2048
+Последний сектор:                +1G
+
+Partition #1 contains a ext3 signature.
+Do you want to remove the signature?     -- No
+
+Сохраняем изменения:             w
+
+Обновлённая таблица разделов:
+  Device     Boot Start     End Sectors Size Id Type
+  /dev/sdb1        2048 2099199 2097152   1G 83 Linux
+
+Увеличиваем размер ФС
+  resize2fs /dev/sdb1 1G
+  The filesystem on /dev/sdb1 is now 1048576 (1k) blocks long.
+
+df -h
+  /dev/sdb1       984M  2.8M  936M   1% /mnt/newdisk
+
+  10. Проверить ФС на ошибки в режиме только чтение, без исправления ошибок
+root@kirill-server:~# e2fsck -n /dev/sdb1
+e2fsck 1.44.1 (24-Mar-2018)
+/dev/sdb1 has been mounted 6 times without being checked, check forced.
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+/dev/sdb1: 13/260096 files (0.0% non-contiguous), 43859/1048576 blocks
+
+  11. Монтирование файловых систем, находящихся в сетевом доступе
+Монтирование файловой системы, доступной по протоколу NFS на сервере thistle.ml (путь: /shared)
+mount.nfs thistle.ml:/shared /mnt/shared/
+
+Автоматическое монтирование ресурса в режиме только чтение
+Файл /etc/fstab:
+  thistle.ml:/shared /mnt/shared nfs ro
