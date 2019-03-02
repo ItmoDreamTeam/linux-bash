@@ -8,7 +8,7 @@ REPOCONF="localrepo.repo"
 #1
 yum -y install gcc gcc-c++ make ncurses-devel boost boost-devel
 yum -y install createrepo epel-release
-yum -y install alien
+yum -y install alien rpmrebuild
 
 #2
 mkdir -p "$BASTET_DIR"
@@ -50,3 +50,12 @@ do
 done
 
 yum list available
+
+#8
+curl http://files.thistle.ml/fortunes-ru_1.52-2_all.deb -Os
+alien -r fortunes-ru_1.52-2_all.deb
+
+# Manually fix incorrectly configured rpm package with rpmrebuild
+rpmrebuild -pe -d . fortunes-ru-1.52-3.noarch.rpm
+# Install
+rpm -ivh noarch/fortunes-ru-1.52-3.noarch.rpm
