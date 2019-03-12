@@ -45,7 +45,7 @@ for conf in $(ls "$REPOCONF_DIR")
 do
   if [[ "$conf" != "$REPOCONF" ]]
   then
-    mv "$REPOCONF_DIR/$conf" "$REPOCONF_DIR/$conf~"
+    mv "$REPOCONF_DIR/$conf" "$REPOCONF_DIR/$conf-off"
   fi
 done
 
@@ -54,8 +54,4 @@ yum list available
 #8
 curl http://files.thistle.ml/fortunes-ru_1.52-2_all.deb -Os
 alien -r fortunes-ru_1.52-2_all.deb
-
-# Manually fix incorrectly configured rpm package with rpmrebuild
-rpmrebuild -pe -d . fortunes-ru-1.52-3.noarch.rpm
-# Install
-rpm -ivh noarch/fortunes-ru-1.52-3.noarch.rpm
+rpm -i --force fortunes-ru-1.52-3.noarch.rpm
